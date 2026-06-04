@@ -1,0 +1,126 @@
+version: '3.8'
+
+services:
+  node1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: blockchain-node
+    container_name: node1
+    hostname: node1
+    environment:
+      - NODE_ID=node1
+      - IS_BOOTSTRAP=true
+      - HTTP_PORT=5000
+      - P2P_PORT=6000
+      - DATA_DIR=/data
+    ports:
+      - "5001:5000"
+      - "6001:6000"
+    volumes:
+      - blockchain_data_node1:/data
+    networks:
+      - blockchain-net
+
+  node2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: blockchain-node
+    container_name: node2
+    hostname: node2
+    environment:
+      - NODE_ID=node2
+      - BOOTSTRAP_PEER=node1:6000
+      - HTTP_PORT=5000
+      - P2P_PORT=6000
+      - DATA_DIR=/data
+    ports:
+      - "5002:5000"
+      - "6002:6000"
+    volumes:
+      - blockchain_data_node2:/data
+    networks:
+      - blockchain-net
+    depends_on:
+      - node1
+
+  node3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: blockchain-node
+    container_name: node3
+    hostname: node3
+    environment:
+      - NODE_ID=node3
+      - BOOTSTRAP_PEER=node1:6000
+      - HTTP_PORT=5000
+      - P2P_PORT=6000
+      - DATA_DIR=/data
+    ports:
+      - "5003:5000"
+      - "6003:6000"
+    volumes:
+      - blockchain_data_node3:/data
+    networks:
+      - blockchain-net
+    depends_on:
+      - node1
+
+  node4:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: blockchain-node
+    container_name: node4
+    hostname: node4
+    environment:
+      - NODE_ID=node4
+      - BOOTSTRAP_PEER=node1:6000
+      - HTTP_PORT=5000
+      - P2P_PORT=6000
+      - DATA_DIR=/data
+    ports:
+      - "5004:5000"
+      - "6004:6000"
+    volumes:
+      - blockchain_data_node4:/data
+    networks:
+      - blockchain-net
+    depends_on:
+      - node1
+
+  node5:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: blockchain-node
+    container_name: node5
+    hostname: node5
+    environment:
+      - NODE_ID=node5
+      - BOOTSTRAP_PEER=node1:6000
+      - HTTP_PORT=5000
+      - P2P_PORT=6000
+      - DATA_DIR=/data
+    ports:
+      - "5005:5000"
+      - "6005:6000"
+    volumes:
+      - blockchain_data_node5:/data
+    networks:
+      - blockchain-net
+    depends_on:
+      - node1
+
+networks:
+  blockchain-net:
+    driver: bridge
+
+volumes:
+  blockchain_data_node1:
+  blockchain_data_node2:
+  blockchain_data_node3:
+  blockchain_data_node4:
+  blockchain_data_node5:
