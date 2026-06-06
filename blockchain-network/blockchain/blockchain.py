@@ -34,9 +34,9 @@ class Blockchain:
     def get_last_block(self) -> Block:
         return self.chain[-1]
 
-    def add_transaction(self, sender: str, recipient: str, amount: float) -> int:
+    def add_transaction(self, sender: str, recipient: str, amount: float, data: dict = None) -> int:
         """Adds a new transaction to the list of pending transactions."""
-        tx = Transaction(sender=sender, recipient=recipient, amount=amount)
+        tx = Transaction(sender=sender, recipient=recipient, amount=amount, data=data)
         with self.lock:
             # Prevent adding duplicates
             if any(p_tx.transaction_id == tx.transaction_id for p_tx in self.pending_transactions):

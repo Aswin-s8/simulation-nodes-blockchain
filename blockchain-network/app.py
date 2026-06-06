@@ -2,9 +2,10 @@ from flask import Flask, jsonify, request
 import atexit
 from blockchain.blockchain import Blockchain
 from blockchain.networking import P2PNetwork
+from blockchain.contracts import ContractVM
 import config
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static', static_url_path='')
 
 # Initialize Core Blockchain engine
 blockchain = Blockchain()
@@ -17,6 +18,19 @@ p2p.start()
 @atexit.register
 def shutdown():
     p2p.stop()
+
+@app.after_request
+def after_request(response):
+    """Enable CORS headers for cross-node browser communication."""
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    return response
+
+@app.route('/', methods=['GET'])
+def index():
+    """Serve the web dashboard frontend."""
+    return app.send_static_file('index.html')
 
 @app.route('/chain', methods=['GET'])
 def get_chain():
@@ -40,11 +54,12 @@ def new_transaction():
     if not all(k in values for k in required):
         return jsonify({"message": "Missing required fields: sender, recipient, amount"}), 400
     
-    # Add transaction to the local pool
+    # Add transaction to the local pool (including custom data if present)
     next_block_index = blockchain.add_transaction(
         sender=values['sender'],
         recipient=values['recipient'],
-        amount=values['amount']
+        amount=values['amount'],
+        data=values.get('data')
     )
     
     # Retrieve the transaction details for P2P broadcasting
@@ -116,6 +131,29 @@ def get_status():
         "last_block_hash": last_block.hash
     }
     return jsonify(response), 200
+
+@app.route('/pending', methods=['GET'])
+def get_pending():
+    """Retrieve the list of pending transactions in the mempool."""
+    with blockchain.lock:
+        pending_data = [tx.to_dict() for tx in blockchain.pending_transactions]
+    return jsonify(pending_data), 200
+
+@app.route('/contracts', methods=['GET'])
+def get_contracts():
+    """Retrieve all contracts and their computed states."""
+    with blockchain.lock:
+        contracts_state = ContractVM.compute_state(blockchain.chain)
+    return jsonify(contracts_state), 200
+
+@app.route('/contracts/<name>', methods=['GET'])
+def get_contract(name):
+    """Retrieve the computed state of a specific contract."""
+    with blockchain.lock:
+        contracts_state = ContractVM.compute_state(blockchain.chain)
+    if name in contracts_state:
+        return jsonify(contracts_state[name]), 200
+    return jsonify({"message": f"Contract '{name}' not found"}), 404
 
 if __name__ == '__main__':
     # Flask runs inside containers, listening on 0.0.0.0

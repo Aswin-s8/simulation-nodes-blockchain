@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blockchain Simulation Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="glow-bg"></div>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo-area">
+                <div class="pulse-ring"></div>
+                <h1>SIMULATION NET</h1>
+                <span class="badge">V1.0</span>
+            </div>
+            
+            <div class="global-status">
+                <span class="status-label">Active Node Connection:</span>
+                <span id="active-node-badge" class="badge badge-offline">Connecting...</span>
+            </div>
+        </header>
+
+        <!-- Node Selector Grid -->
+        <section class="section-card node-selector-section">
+            <h2>Select Node to Inspect & Control</h2>
+            <div class="node-grid" id="node-grid">
+                <!-- Dynamic Node Cards will be inserted here -->
+            </div>
+        </section>
+
+        <!-- Main Workspace Split -->
+        <div class="workspace-layout">
+            
+            <!-- Left Side: Status and Interactions -->
+            <div class="control-panel">
+                
+                <!-- Active Node Info Card -->
+                <div class="section-card status-card">
+                    <div class="card-header">
+                        <h3>Node Configuration</h3>
+                        <button class="btn btn-secondary" onclick="refreshActiveNodeState()">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                            Sync
+                        </button>
+                    </div>
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <span class="meta-label">Node ID</span>
+                            <span class="meta-value font-mono" id="val-node-id">-</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">HTTP Port</span>
+                            <span class="meta-value" id="val-http-port">-</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">P2P Port</span>
+                            <span class="meta-value" id="val-p2p-port">-</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Role</span>
+                            <span class="meta-value" id="val-node-role">-</span>
+                        </div>
+                    </div>
+                    
+                    <div class="peers-list-section">
+                        <h4>P2P Connected Peers (<span id="peers-count">0</span>)</h4>
+                        <div class="peers-chips" id="peers-chips">
+                            <!-- Peers list -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Wallet Settings -->
+                <div class="section-card">
+                    <h3>User Identity (Sender Wallet)</h3>
+                    <div class="form-group">
+                        <label for="wallet-select">Acting Address</label>
+                        <select id="wallet-select" class="form-control" onchange="updateWalletIdentity()">
+                            <option value="Alice_Wallet">Alice (Alice_Wallet)</option>
+                            <option value="Bob_Wallet">Bob (Bob_Wallet)</option>
+                            <option value="Charlie_Wallet">Charlie (Charlie_Wallet)</option>
+                            <option value="Developer_Wallet">Developer (Developer_Wallet)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Transaction / Contract Actions -->
+                <div class="section-card">
+                    <div class="tab-header">
+                        <button class="tab-btn active" onclick="switchFormTab('transfer-tab')">Native Transaction</button>
+                        <button class="tab-btn" onclick="switchFormTab('contract-tab')">Deploy Contract</button>
+                    </div>
+                    
+                    <!-- Transfer Form -->
+                    <div id="transfer-tab" class="tab-content active">
+                        <form id="tx-form" onsubmit="submitTransaction(event)">
+                            <div class="form-group">
+                                <label for="tx-recipient">Recipient Address</label>
+                                <input type="text" id="tx-recipient" class="form-control" placeholder="e.g. Bob_Wallet" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="tx-amount">Amount (NATIVE)</label>
+                                <input type="number" id="tx-amount" class="form-control" value="10" min="0" step="any" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-block">Broadcast Transaction</button>
+                        </form>
+                    </div>
+
+                    <!-- Contract Deploy Form -->
+                    <div id="contract-tab" class="tab-content">
+                        <form id="contract-form" onsubmit="deployContract(event)">
+                            <div class="form-group">
+                                <label for="contract-name">Contract ID (Unique Name)</label>
+                                <input type="text" id="contract-name" class="form-control font-mono" placeholder="e.g. counter_v1" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="contract-type">Contract Type</label>
+                                <select id="contract-type" class="form-control" onchange="adjustContractFormFields()">
+                                    <option value="counter">Counter (Increment/Decrement)</option>
+                                    <option value="token">Custom Token (Mint/Transfer)</option>
+                                    <option value="guestbook">Guestbook / Message Wall</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Dynamic fields based on contract type -->
+                            <div id="contract-params">
+                                <div class="form-group" id="field-initial-val">
+                                    <label for="param-initial-val">Initial Count Value</label>
+                                    <input type="number" id="param-initial-val" class="form-control" value="0">
+                                </div>
+                                <div class="form-group" id="field-token-name" style="display:none;">
+                                    <label for="param-token-name">Token Name</label>
+                                    <input type="text" id="param-token-name" class="form-control" value="MyCoin">
+                                </div>
+                                <div class="form-group" id="field-token-symbol" style="display:none;">
+                                    <label for="param-token-symbol">Symbol</label>
+                                    <input type="text" id="param-token-symbol" class="form-control font-mono" value="MCN">
+                                </div>
+                                <div class="form-group" id="field-token-supply" style="display:none;">
+                                    <label for="param-token-supply">Initial Supply</label>
+                                    <input type="number" id="param-token-supply" class="form-control" value="1000">
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary btn-block">Deploy Smart Contract</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Mining Operations -->
+                <div class="section-card mine-card">
+                    <div class="mine-flex">
+                        <div>
+                            <h3>Mempool Status</h3>
+                            <p><span id="mempool-count" class="mempool-badge">0</span> Pending Transactions</p>
+                        </div>
+                        <button class="btn btn-mine" id="mine-btn" onclick="mineBlock()">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.707 2.293a1 1 0 0 0-1.414 0l-12.5 12.5a1 1 0 0 0 0 1.414l2.5 2.5a1 1 0 0 0 1.414 0l12.5-12.5a1 1 0 0 0 0-1.414l-2.5-2.5zM7.5 10.5 4 14l-2 8 8-2 3.5-3.5"/></svg>
+                            Mine Block
+                        </button>
+                    </div>
+                    <div class="pending-list" id="pending-list">
+                        <div class="empty-state">No pending transactions in mempool.</div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Right Side: Smart Contracts and Blockchain Explorer -->
+            <div class="view-panel">
+                
+                <!-- Smart Contracts Sandbox -->
+                <div class="section-card">
+                    <h3>Smart Contract Deployments</h3>
+                    <div class="contracts-grid" id="contracts-grid">
+                        <div class="empty-state">No active smart contracts deployed yet. Deploy one to start interacting!</div>
+                    </div>
+                </div>
+
+                <!-- Blockchain Explorer -->
+                <div class="section-card explorer-card">
+                    <div class="card-header">
+                        <h3>Blockchain Explorer</h3>
+                        <span class="badge" id="explorer-block-height">Height: 0</span>
+                    </div>
+                    <div class="timeline" id="blockchain-timeline">
+                        <!-- Chain blocks will be rendered here -->
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast">Notification Message</div>
+
+    <script src="app.js"></script>
+</body>
+</html>
