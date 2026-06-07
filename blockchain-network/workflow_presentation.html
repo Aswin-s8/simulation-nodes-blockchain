@@ -1,0 +1,1391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blockchain Simulation Network Workflow</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: rgba(17, 25, 40, 0.75);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --primary-glow: #6366f1;
+            --accent-glow: #06b6d4;
+            --success-glow: #10b981;
+            --warning-glow: #f59e0b;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --sidebar-width: 260px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+        }
+
+        /* Glowing background blobs */
+        .glow-blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.15;
+            z-index: 0;
+            pointer-events: none;
+        }
+        .blob-1 {
+            width: 400px;
+            height: 400px;
+            background-color: var(--primary-glow);
+            top: -100px;
+            left: 10%;
+        }
+        .blob-2 {
+            width: 500px;
+            height: 500px;
+            background-color: var(--accent-glow);
+            bottom: -150px;
+            right: 10%;
+        }
+
+        /* Presentation layout */
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: rgba(9, 14, 25, 0.9);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 24px;
+            z-index: 10;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 30px;
+        }
+
+        .logo-ring {
+            width: 18px;
+            height: 18px;
+            border: 3px solid var(--accent-glow);
+            border-top: 3px solid transparent;
+            border-radius: 50%;
+            animation: spin 2s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .logo-area h1 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            background: linear-gradient(135deg, #fff 30%, var(--accent-glow));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .slide-nav {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex-grow: 1;
+        }
+
+        .nav-item {
+            padding: 10px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: 1px solid transparent;
+        }
+
+        .nav-item:hover {
+            color: var(--text-main);
+            background-color: rgba(255, 255, 255, 0.03);
+        }
+
+        .nav-item.active {
+            color: #fff;
+            background: rgba(99, 102, 241, 0.15);
+            border-color: rgba(99, 102, 241, 0.3);
+            font-weight: 600;
+        }
+
+        .nav-item .slide-num {
+            font-family: 'Fira Code', monospace;
+            font-size: 0.75rem;
+            opacity: 0.7;
+        }
+
+        .sidebar-footer {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border-color);
+            padding-top: 15px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* Main slide viewport */
+        .viewport {
+            flex-grow: 1;
+            position: relative;
+            z-index: 5;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .slides-container {
+            flex-grow: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            transform: translateX(50px);
+            transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            padding: 40px;
+        }
+
+        .slide.active {
+            opacity: 1;
+            transform: translateX(0);
+            pointer-events: auto;
+        }
+
+        .slide-header {
+            margin-bottom: 24px;
+        }
+
+        .slide-tag {
+            font-size: 0.75rem;
+            font-family: 'Fira Code', monospace;
+            color: var(--accent-glow);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        .slide-title {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(to right, #ffffff, #d1d5db);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .slide-content {
+            display: flex;
+            gap: 30px;
+            height: calc(100% - 100px);
+            align-items: stretch;
+        }
+
+        .slide-text {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: var(--text-muted);
+            justify-content: center;
+        }
+
+        .slide-text p strong {
+            color: var(--text-main);
+        }
+
+        .slide-text ul {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .slide-text li {
+            position: relative;
+            padding-left: 20px;
+        }
+
+        .slide-text li::before {
+            content: '→';
+            position: absolute;
+            left: 0;
+            color: var(--accent-glow);
+            font-weight: bold;
+        }
+
+        .slide-visual {
+            flex: 1.2;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            backdrop-filter: blur(12px);
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+            justify-content: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        /* Controls bar */
+        .controls-bar {
+            height: 70px;
+            border-top: 1px solid var(--border-color);
+            padding: 0 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: rgba(9, 14, 25, 0.5);
+            z-index: 10;
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            padding: 10px 20px;
+            border-radius: 8px;
+            color: var(--text-main);
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover:not(:disabled) {
+            background-color: rgba(99, 102, 241, 0.15);
+            border-color: var(--primary-glow);
+        }
+
+        .btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .progress-indicator {
+            flex-grow: 1;
+            margin: 0 40px;
+            height: 4px;
+            background-color: rgba(255,255,255,0.05);
+            border-radius: 2px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            background: linear-gradient(to right, var(--primary-glow), var(--accent-glow));
+            width: 12.5%;
+            transition: width 0.3s ease;
+        }
+
+        /* Custom Presentation Elements */
+        .file-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .file-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .file-card:hover {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: rgba(99, 102, 241, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .file-card h4 {
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+            color: var(--text-main);
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .file-card h4::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: var(--accent-glow);
+        }
+
+        .file-card p {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        /* Interactive discovery widget styles */
+        .p2p-sim-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            gap: 16px;
+        }
+
+        .nodes-canvas {
+            flex-grow: 1;
+            position: relative;
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+            border: 1px dashed rgba(255,255,255,0.05);
+        }
+
+        .node-bubble {
+            position: absolute;
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #1e293b, #0f172a);
+            border: 2px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-size: 0.75rem;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            z-index: 2;
+        }
+
+        .node-bubble.active {
+            border-color: var(--primary-glow);
+            box-shadow: 0 0 15px rgba(99,102,241,0.5);
+        }
+
+        .node-bubble.bootstrap {
+            border-color: var(--accent-glow);
+            box-shadow: 0 0 15px rgba(6,182,212,0.4);
+        }
+
+        .node-bubble .port {
+            font-size: 0.6rem;
+            color: var(--text-muted);
+            font-family: 'Fira Code', monospace;
+            font-weight: normal;
+        }
+
+        /* Absolute positions for nodes in canvas */
+        #node-bubble-1 { top: 50%; left: 50%; transform: translate(-50%, -50%); } /* bootstrap */
+        #node-bubble-2 { top: 15%; left: 20%; }
+        #node-bubble-3 { top: 15%; right: 20%; }
+        #node-bubble-4 { bottom: 15%; left: 20%; }
+        #node-bubble-5 { bottom: 15%; right: 20%; }
+
+        .svg-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .connection-line {
+            stroke: rgba(255, 255, 255, 0.08);
+            stroke-width: 2;
+            stroke-dasharray: 5 5;
+            transition: all 0.3s ease;
+        }
+
+        .connection-line.active {
+            stroke: var(--accent-glow);
+            stroke-dasharray: none;
+            animation: dash 20s linear infinite;
+        }
+
+        .packet-dot {
+            fill: var(--accent-glow);
+            r: 4;
+            display: none;
+        }
+
+        /* Hashing Widget Styles */
+        .hash-widget {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            font-size: 0.85rem;
+        }
+
+        .hash-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .hash-input-group label {
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .input-field {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            padding: 8px 12px;
+            border-radius: 6px;
+            color: var(--text-main);
+            font-family: inherit;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--primary-glow);
+        }
+
+        .hash-payload-preview {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 10px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.75rem;
+            word-break: break-all;
+            color: var(--text-muted);
+            border-left: 3px solid var(--primary-glow);
+        }
+
+        .hash-result-box {
+            background: rgba(99, 102, 241, 0.05);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            padding: 12px;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.8rem;
+            color: var(--text-main);
+            word-break: break-all;
+        }
+
+        .hash-result-box span {
+            color: var(--accent-glow);
+            font-weight: bold;
+        }
+
+        /* Smart Contract Widget Styles */
+        .vm-sim-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            height: 100%;
+        }
+
+        .vm-tabs {
+            display: flex;
+            gap: 8px;
+        }
+
+        .vm-tab {
+            padding: 6px 12px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .vm-tab.active {
+            background: rgba(6, 182, 212, 0.15);
+            border-color: var(--accent-glow);
+            color: #fff;
+        }
+
+        .vm-body {
+            display: flex;
+            gap: 16px;
+            flex-grow: 1;
+            height: 100px;
+        }
+
+        .vm-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .vm-state-pane {
+            flex: 1;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.75rem;
+            overflow-y: auto;
+            color: var(--success-glow);
+        }
+
+        .vm-state-title {
+            color: var(--text-muted);
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+
+        .vm-history-pane {
+            height: 90px;
+            background: rgba(0,0,0,0.15);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.7rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        /* Mining Widget */
+        .mining-widget {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            height: 100%;
+        }
+
+        .mining-block {
+            background: rgba(0,0,0,0.25);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 14px;
+        }
+
+        .block-meta-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            font-size: 0.75rem;
+            font-family: 'Fira Code', monospace;
+            margin-bottom: 10px;
+        }
+
+        .block-txs-box {
+            background: rgba(0,0,0,0.15);
+            border: 1px solid var(--border-color);
+            padding: 8px;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .mining-output {
+            background: #05070c;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.75rem;
+            min-height: 80px;
+            overflow-y: auto;
+            color: var(--text-muted);
+            flex-grow: 1;
+        }
+
+        .mining-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .btn-mine-play {
+            background-color: var(--warning-glow);
+            color: #0b0f19;
+            font-weight: bold;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s ease;
+        }
+
+        .btn-mine-play:hover {
+            box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+            transform: scale(1.02);
+        }
+
+        /* Explorer widget */
+        .explorer-widget {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            height: 100%;
+        }
+
+        .chain-timeline {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            overflow-x: auto;
+            padding: 10px 0;
+            flex-grow: 1;
+        }
+
+        .chain-block-card {
+            min-width: 140px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 0.7rem;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .chain-block-card.newly-mined {
+            animation: blockPulse 1s ease-out;
+            border-color: var(--success-glow);
+        }
+
+        @keyframes blockPulse {
+            0% { transform: scale(0.9); box-shadow: 0 0 20px var(--success-glow); }
+            100% { transform: scale(1); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        }
+
+        .chain-block-card h5 {
+            color: var(--text-main);
+            font-family: 'Fira Code', monospace;
+            margin-bottom: 4px;
+        }
+
+        .chain-block-card p {
+            color: var(--text-muted);
+            font-size: 0.65rem;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .chain-arrow {
+            color: var(--text-muted);
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="glow-blob blob-1"></div>
+    <div class="glow-blob blob-2"></div>
+
+    <!-- Sidebar Navigation -->
+    <div class="sidebar">
+        <div>
+            <div class="logo-area">
+                <div class="logo-ring"></div>
+                <h1>BLOCKCHAIN SIM</h1>
+            </div>
+            <ul class="slide-nav">
+                <li class="nav-item active" onclick="goToSlide(1)">
+                    <span class="slide-num">01</span> Overview
+                </li>
+                <li class="nav-item" onclick="goToSlide(2)">
+                    <span class="slide-num">02</span> Node Initialization
+                </li>
+                <li class="nav-item" onclick="goToSlide(3)">
+                    <span class="slide-num">03</span> P2P Discovery
+                </li>
+                <li class="nav-item" onclick="goToSlide(4)">
+                    <span class="slide-num">04</span> Transaction flow
+                </li>
+                <li class="nav-item" onclick="goToSlide(5)">
+                    <span class="slide-num">05</span> Smart Contract VM
+                </li>
+                <li class="nav-item" onclick="goToSlide(6)">
+                    <span class="slide-num">06</span> Mining Engine
+                </li>
+                <li class="nav-item" onclick="goToSlide(7)">
+                    <span class="slide-num">07</span> Consensus Sync
+                </li>
+                <li class="nav-item" onclick="goToSlide(8)">
+                    <span class="slide-num">08</span> Control Dashboard
+                </li>
+            </ul>
+        </div>
+        <div class="sidebar-footer">
+            <span>Docker Simulation</span>
+            <span>v1.0.0</span>
+        </div>
+    </div>
+
+    <!-- Presentation Viewport -->
+    <div class="viewport">
+        <div class="slides-container">
+            
+            <!-- Slide 1: Welcome & Overview -->
+            <div class="slide active" id="slide-1">
+                <div class="slide-header">
+                    <span class="slide-tag">01. INTRODUCTION</span>
+                    <h2 class="slide-title">Multi-Node Blockchain Simulation</h2>
+                </div>
+                <div class="slide-content">
+                    <div class="slide-text">
+                        <p>This program represents a **decentralized blockchain network** operating inside isolated Docker containers.</p>
+                        <p>To conceptualize the system, think of the network as **5 independent post offices (nodes)**, where each maintains its own physical copy of a **ledger book (the blockchain)**.</p>
+                        <ul>
+                            <li><strong>Consensus Rules</strong> are the strict guidelines preventing anyone from forging records.</li>
+                            <li><strong>Socket Networking</strong> acts as the messaging network immediately broadcasting new transfers or pages.</li>
+                            <li><strong>Smart Contracts</strong> are self-executing agreements running locally on each post office's desk.</li>
+                        </ul>
+                    </div>
+                    <div class="slide-visual">
+                        <div class="file-grid">
+                            <div class="file-card">
+                                <h4>config.py</h4>
+                                <p>Loads parameters like mining difficulty, reward token amounts, and socket network ports.</p>
+                            </div>
+                            <div class="file-card">
+                                <h4>app.py</h4>
+                                <p>Bridges user HTTP requests with the core consensus and socket network engines.</p>
+                            </div>
+                            <div class="file-card">
+                                <h4>blockchain/</h4>
+                                <p>Contains core blockchain components (blocks, transactions, networking, consensus).</p>
+                            </div>
+                            <div class="file-card">
+                                <h4>static/</h4>
+                                <p>Web Dashboard client assets (HTML, CSS, JS) allowing active browser control of the network.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 2: Container Initialization -->
+            <div class="slide" id="slide-2">
+                <div class="slide-header">
+                    <span class="slide-tag">02. INITIALIZATION</span>
+                    <h2 class="slide-title">Container Booting & Disk Load</h2>
+                </div>
+                <div class="slide-content">
+                    <div class="slide-text">
+                        <p>The entire network runs on virtualized nodes. The system initializes state using the following workflow:</p>
+                        <ul>
+                            <li><strong>Docker Compose Orchestration</strong>: Spins up 5 instances concurrently. `node1` acts as bootstrap; `node2-5` rely on config variables to connect.</li>
+                            <li><strong>Persistent Storage loading</strong>: Each node checks if `blockchain.json` exists in its `/data` volume. If present, the history is restored.</li>
+                            <li><strong>Genesis Block Generation</strong>: If no history exists, nodes generate Block #0 (Genesis Block) using a static timestamp `1700000000.0`. This ensures all nodes compute the exact same starting block hash.</li>
+                        </ul>
+                    </div>
+                    <div class="slide-visual" style="font-family: 'Fira Code', monospace; font-size: 0.8rem; line-height: 1.5; color: var(--text-main);">
+                        <div style="background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); padding: 15px; border-radius: 8px;">
+                            <span style="color: var(--accent-glow);"># Genesis Block Parameters</span><br>
+                            Index: <span style="color: var(--success-glow);">0</span><br>
+                            Previous Hash: <span style="color: var(--success-glow);">"1"</span><br>
+                            Proof: <span style="color: var(--success-glow);">100</span><br>
+                            Timestamp: <span style="color: var(--success-glow);">1700000000.0</span><br>
+                            Transactions: <span style="color: var(--success-glow);">[]</span><br>
+                            Hash: <span style="color: var(--warning-glow);">"6b86b273ff34fce19d6b804eff5a3f57..."</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 3: Peer-to-Peer Discovery -->
+            <div class="slide" id="slide-3">
+                <div class="slide-header">
+                    <span class="slide-tag">03. NETWORKING</span>
+                    <h2 class="slide-title">Dynamic P2P Node Discovery</h2>
+                </div>
+                <div class="slide-content">
+                    <div class="slide-text">
+                        <p>Nodes communicate over direct TCP sockets using custom length-prefixed JSON serialization.</p>
+                        <ul>
+                            <li><strong>Server Thread</strong>: Each node listens on socket port `6000` for peer updates.</li>
+                            <li><strong>Bootstrap Registry</strong>: Non-bootstrap nodes connect to `node1:6000` and send a `register` message.</li>
+                            <li><strong>Peer Sharing</strong>: `node1` stores their details and replies with its entire list of known peers.</li>
+                            <li><strong>Mesh Broadcasting</strong>: `node1` broadcasts `new_peer` to the rest of the network, enabling nodes to build a connected mesh.</li>
+                        </ul>
+                    </div>
+                    <div class="slide-visual">
+                        <div class="p2p-sim-container">
+                            <div class="nodes-canvas" id="p2p-canvas">
+                                <svg class="svg-overlay" id="p2p-svg">
+                                    <line id="line-1-2" class="connection-line" x1="50%" y1="50%" x2="30%" y2="25%"></line>
+                                    <line id="line-1-3" class="connection-line" x1="50%" y1="50%" x2="70%" y2="25%"></line>
+                                    <line id="line-1-4" class="connection-line" x1="50%" y1="50%" x2="30%" y2="75%"></line>
+                                    <line id="line-1-5" class="connection-line" x1="50%" y1="50%" x2="70%" y2="75%"></line>
+                                    
+                                    <line id="line-2-3" class="connection-line" x1="30%" y1="25%" x2="70%" y2="25%"></line>
+                                    <line id="line-2-4" class="connection-line" x1="30%" y1="25%" x2="30%" y2="75%"></line>
+                                    <line id="line-3-5" class="connection-line" x1="70%" y1="25%" x2="70%" y2="75%"></line>
+                                    <line id="line-4-5" class="connection-line" x1="30%" y1="75%" x2="70%" y2="75%"></line>
+
+                                    <circle id="p2p-packet" class="packet-dot"></circle>
+                                </svg>
+                                <div class="node-bubble bootstrap active" id="node-bubble-1">
+                                    <span>node1</span>
+                                    <span class="port">:6000</span>
+                                </div>
+                                <div class="node-bubble" id="node-bubble-2">
+                                    <span>node2</span>
+                                    <span class="port">offline</span>
+                                </div>
+                                <div class="node-bubble" id="node-bubble-3">
+                                    <span>node3</span>
+                                    <span class="port">offline</span>
+                                </div>
+                                <div class="node-bubble" id="node-bubble-4">
+                                    <span>node4</span>
+                                    <span class="port">offline</span>
+                                </div>
+                                <div class="node-bubble" id="node-bubble-5">
+                                    <span>node5</span>
+                                    <span class="port">offline</span>
+                                </div>
+                            </div>
+                            <button class="btn" style="align-self: center;" onclick="runP2PDiscoverySimulation()">Trigger Discovery Bootup</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 4: Transaction flow -->
+            <div class="slide" id="slide-4">
+                <div class="slide-header">
+                    <span class="slide-tag">04. MEMPOOL & HASHING</span>
+                    <h2 class="slide-title">Transaction Creation & Propagation</h2>
+                </div>
+                <div class="slide-content">
+                    <div class="slide-text">
+                        <p>Transactions contain `sender`, `recipient`, `amount`, `timestamp`, and optional `data` fields.</p>
+                        <ul>
+                            <li><strong>Uniqueness Hashing</strong>: The unique `transaction_id` is computed using SHA-256 over all parameters. Any attempt to modify a value results in a completely different ID.</li>
+                            <li><strong>Mempool Buffering</strong>: Added transactions are buffered in the local `pending_transactions` list (thread-safe mempool).</li>
+                            <li><strong>Network Flood Fill</strong>: The receiving node propagates the transaction to all active peers, which validate it and propagate it further.</li>
+                        </ul>
+                    </div>
+                    <div class="slide-visual">
+                        <div class="hash-widget">
+                            <div style="font-weight: bold; margin-bottom: 4px; font-size: 0.9rem;">Interactive Fingerprint Hasher</div>
+                            <div class="hash-input-group">
+                                <label>Recipient Wallet</label>
+                                <input type="text" id="hash-recip" class="input-field" value="Bob_Wallet" oninput="calculateLiveHash()">
+                            </div>
+                            <div class="hash-input-group">
+                                <label>Amount (CTK)</label>
+                                <input type="number" id="hash-amt" class="input-field" value="15.5" step="0.1" oninput="calculateLiveHash()">
+                            </div>
+                            <div class="hash-payload-preview" id="hash-payload-display">
+                                Payload: Alice_Wallet:Bob_Wallet:15.5:1717780000:{}
+                            </div>
+                            <div class="hash-result-box">
+                                Hash fingerprint:<br>
+                                <span id="hash-result-display">computing...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 5: Smart Contract VM -->
+            <div class="slide" id="slide-5">
+                <div class="slide-header">
+                    <span class="slide-tag">05. VIRTUAL MACHINE</span>
+                    <h2 class="slide-title">Dynamic Smart Contract Engine</h2>
+                </div>
+                <div class="slide-content">
+                    <div class="slide-text">
+                        <p>Smart contracts do not require a separate persistent state database. Instead, they run dynamically via `ContractVM` processing.</p>
+                        <ul>
+                            <li><strong>Deployment</strong>: Triggered when a transaction is mined targeting `"contract_deploy"`, specifying contract name, type, and parameters.</li>
+                            <li><strong>Replays</strong>: To check states, the VM starts at block 0 and chronologically "replays" every transaction associated with the contract address.</li>
+                            <li><strong>Types</strong>: Supports three built-in types: **Counter** (count integers), **Token** (mint/transfer ERC-20 style assets), and **Guestbook** (message logs).</li>
+                        </ul>
+                    </div>
+                    <div class="slide-visual">
+                        <div class="vm-sim-container">
+                            <div class="vm-tabs">
+                                <div class="vm-tab active" id="tab-counter" onclick="switchVMSim('counter')">Counter Contract</div>
+                                <div class="vm-tab" id="tab-token" onclick="switchVMSim('token')">Token Contract</div>
+                            </div>
+                            <div class="vm-body">
+                                <div class="vm-controls">
+                                    <button class="btn" style="padding: 6px 12px; font-size: 0.75rem;" onclick="triggerVMAction()">Execute Action</button>
+                                    <button class="btn" style="padding: 6px 12px; font-size: 0.75rem;" onclick="resetVMSim()">Replay VM State</button>
+                                </div>
+                                <div style="flex:1.2; display: flex; flex-direction: column;">
+                                    <div class="vm-state-title">VM Computed State</div>
+                                    <pre class="vm-state-pane" id="vm-state-display">{ "count": 0 }</pre>
+                                </div>
+                            </div>
+                            <div class="vm-state-title">Chronological Execution Logs</div>
+                            <div class="vm-history-pane" id="vm-logs-display">
+                                [Block 0] Contract counter_v1 initialized with state count=0.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 6: Mining Engine -->
+            <div class="slide" id="slide-6">
+                <div class="slide-header">
+                    <span class="slide-tag">06. CONSENSUS ENGINE</span>
+                    <h2 class="slide-title">Proof-of-Work Mining Loop</h2>
+                </div>
+                <div class="slide-content">
+                    <div class="slide-text">
+                        <p>Mining groups pending transactions, issues coin rewards, and computes cryptographic proof.</p>
+                        <ul>
+                            <li><strong>Block Reward</strong>: Node automatically inserts a reward transaction (`10.0` CTK to itself) before starting.</li>
+                            <li><strong>Non-blocking loop</strong>: The node runs the PoW CPU cycle outside the database lock to keep other API requests responsive.</li>
+                            <li><strong>Proof-of-Work puzzle</strong>: The miner loops the `proof` nonce until the block's SHA-256 hash contains the necessary leading zeros (difficulty level).</li>
+                            <li><strong>Stale check</strong>: On completion, the node locks the database and checks if the chain progressed while it was mining. If so, the block is discarded.</li>
+                        </ul>
+                    </div>
+                    <div class="slide-visual">
+                        <div class="mining-widget">
+                            <div class="mining-block">
+                                <div class="block-meta-row">
+                                    <div>Block Height: <span style="color: var(--accent-glow);" id="mine-index">#1</span></div>
+                                    <div>Prev Hash: <span style="color: var(--text-muted);" id="mine-prev">6b86b273...</span></div>
+                                </div>
+                                <div class="block-txs-box">
+                                    <div>[Reward] MINING_REWARD -> node1 (10.0 CTK)</div>
+                                    <div>[Tx 1] Alice_Wallet -> Bob_Wallet (15.5 CTK)</div>
+                                </div>
+                            </div>
+                            <div class="mining-output" id="mine-log">
+                                Ready to mine block...
+                            </div>
+                            <div class="mining-controls">
+                                <button class="btn-mine-play" id="mine-btn-play" onclick="startInteractiveMining()">Mine Block (PoW)</button>
+                                <span style="font-size: 0.75rem; font-family: 'Fira Code', monospace; color: var(--text-muted);" id="mine-nonce-display">Nonce: 0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 7: Consensus Sync -->
+            <div class="slide" id="slide-7">
+                <div class="slide-header">
+                    <span class="slide-tag">07. CONFLICT RESOLUTION</span>
+                    <h2 class="slide-title">Synchronization & Longest Chain Rule</h2>
+                </div>
+                <div class="slide-content">
+                    <div class="slide-text">
+                        <p>If blocks are mined simultaneously or network latency cuts off a node, chains will diverge. Consensus resolves this:</p>
+                        <ul>
+                            <li><strong>Validation checks</strong>: Incoming blocks must verify: `index == last_index + 1`, correct proof-of-work, and correct previous hash pointer.</li>
+                            <li><strong>Fork detection</strong>: If an incoming block has an index greater than `last_index + 1`, the node knows it missed blocks.</li>
+                            <li><strong>Get Chain request</strong>: The out-of-sync node triggers a `get_chain` command to request the full ledger sequence from its peer.</li>
+                            <li><strong>Longest Chain Rule</strong>: If the peer's chain is valid and longer, the local chain is replaced completely, and mempool transactions are synchronized.</li>
+                        </ul>
+                    </div>
+                    <div class="slide-visual">
+                        <div class="explorer-widget">
+                            <div style="font-weight: bold; font-size: 0.9rem;">Blockchain explorer synchronization simulation</div>
+                            <div class="chain-timeline" id="chain-explorer-view">
+                                <div class="chain-block-card">
+                                    <h5>Block #0</h5>
+                                    <p>Prev: 1</p>
+                                    <p>Hash: 6b86b273...</p>
+                                </div>
+                            </div>
+                            <button class="btn" style="align-self: center;" onclick="addSimulatedBlock()">Receive New Block from Peer</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 8: Control Dashboard -->
+            <div class="slide" id="slide-8">
+                <div class="slide-header">
+                    <span class="slide-tag">08. WEB INTERFACE</span>
+                    <h2 class="slide-title">Visual Control Dashboard</h2>
+                </div>
+                <div class="slide-content">
+                    <div class="slide-text">
+                        <p>The system includes a visual dashboard built in vanilla web components allowing active system operations:</p>
+                        <ul>
+                            <li><strong>Node Selector Grid</strong>: Pick any of the 5 nodes to inspect its state, ports, roles, and connected peers.</li>
+                            <li><strong>Transaction and Contract Forms</strong>: Construct wallet transfers, deploy smart contracts, and send action payloads to contracts.</li>
+                            <li><strong>Telemetry Explorer</strong>: Renders block history chronologically, displaying transactions, proofs, and transaction hashes.</li>
+                            <li><strong>Live Mempool Display</strong>: Tracks transactions buffered in the mempool waiting to be mined.</li>
+                        </ul>
+                    </div>
+                    <div class="slide-visual" style="align-items: center; justify-content: center; gap: 20px;">
+                        <!-- Custom Mock SVG for dashboard -->
+                        <svg width="280" height="180" viewBox="0 0 280 180" fill="none" xmlns="http://www.w3.org/2000/svg" style="border: 1px solid var(--border-color); border-radius: 8px; background: rgba(0,0,0,0.4);">
+                            <rect x="10" y="10" width="260" height="20" rx="3" fill="#1e293b"/>
+                            <circle cx="20" cy="20" r="4" fill="#ef4444"/>
+                            <circle cx="32" cy="20" r="4" fill="#eab308"/>
+                            <circle cx="44" cy="20" r="4" fill="#22c55e"/>
+                            <rect x="10" y="40" width="70" height="130" rx="4" fill="#1e293b" opacity="0.5"/>
+                            <rect x="90" y="40" width="180" height="60" rx="4" fill="#1e293b" opacity="0.5"/>
+                            <rect x="90" y="110" width="180" height="60" rx="4" fill="#1e293b" opacity="0.5"/>
+                            <rect x="15" y="50" width="60" height="10" rx="2" fill="var(--accent-glow)" opacity="0.6"/>
+                            <rect x="15" y="65" width="60" height="10" rx="2" fill="var(--text-muted)" opacity="0.3"/>
+                            <rect x="15" y="80" width="60" height="10" rx="2" fill="var(--text-muted)" opacity="0.3"/>
+                            <circle cx="130" cy="70" r="15" fill="var(--primary-glow)" opacity="0.8"/>
+                            <line x1="145" y1="70" x2="200" y2="70" stroke="var(--text-muted)" stroke-dasharray="2 2"/>
+                            <circle cx="220" cy="70" r="15" fill="var(--accent-glow)" opacity="0.8"/>
+                        </svg>
+                        <div style="font-size: 0.8rem; text-align: center; color: var(--text-muted);">
+                            Access the dashboard locally via the host mapped ports<br>
+                            <span style="color: var(--accent-glow); font-family: 'Fira Code', monospace;">http://localhost:5001</span> to <span style="color: var(--accent-glow); font-family: 'Fira Code', monospace;">5005</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Controls Bar -->
+        <div class="controls-bar">
+            <button class="btn" id="prev-btn" onclick="prevSlide()" disabled>
+                ← Back
+            </button>
+            <div class="progress-indicator">
+                <div class="progress-bar" id="prog-bar"></div>
+            </div>
+            <button class="btn" id="next-btn" onclick="nextSlide()">
+                Next →
+            </button>
+        </div>
+    </div>
+
+    <!-- Presentation Engine JS -->
+    <script>
+        let currentSlide = 1;
+        const totalSlides = 8;
+
+        function goToSlide(n) {
+            if (n < 1 || n > totalSlides) return;
+            
+            // Update active classes on slides
+            document.querySelectorAll('.slide').forEach(s => s.classList.remove('active'));
+            document.getElementById(`slide-${n}`).classList.add('active');
+
+            // Update active class on nav
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach((item, index) => {
+                if (index === n - 1) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+
+            // Update progress bar
+            const percent = (n / totalSlides) * 100;
+            document.getElementById('prog-bar').style.width = percent + '%';
+
+            // Enable/disable buttons
+            document.getElementById('prev-btn').disabled = (n === 1);
+            document.getElementById('next-btn').disabled = (n === totalSlides);
+
+            currentSlide = n;
+
+            // Start animations or reset widget states
+            if (n === 3) {
+                resetP2PDiscovery();
+            }
+            if (n === 4) {
+                calculateLiveHash();
+            }
+        }
+
+        function nextSlide() {
+            goToSlide(currentSlide + 1);
+        }
+
+        function prevSlide() {
+            goToSlide(currentSlide - 1);
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                prevSlide();
+            }
+        });
+
+        // ------------------ Slide 3 Widget: P2P Network ------------------
+        function resetP2PDiscovery() {
+            const bubbles = document.querySelectorAll('.node-bubble');
+            bubbles.forEach((b, index) => {
+                if (index > 0) {
+                    b.classList.remove('active');
+                    b.querySelector('.port').innerText = 'offline';
+                    b.querySelector('.port').style.color = '';
+                }
+            });
+            const lines = document.querySelectorAll('.connection-line');
+            lines.forEach(l => l.classList.remove('active'));
+            const packet = document.getElementById('p2p-packet');
+            packet.style.display = 'none';
+        }
+
+        function runP2PDiscoverySimulation() {
+            resetP2PDiscovery();
+            let step = 1;
+            const delay = 900;
+            
+            // Animation timings
+            setTimeout(() => {
+                // Node 2 registers
+                document.getElementById('node-bubble-2').classList.add('active');
+                document.getElementById('node-bubble-2').querySelector('.port').innerText = ':6000';
+                document.getElementById('line-1-2').classList.add('active');
+                animatePacket(30, 25, 50, 50);
+            }, delay * 1);
+
+            setTimeout(() => {
+                // Node 3 registers
+                document.getElementById('node-bubble-3').classList.add('active');
+                document.getElementById('node-bubble-3').querySelector('.port').innerText = ':6000';
+                document.getElementById('line-1-3').classList.add('active');
+                animatePacket(70, 25, 50, 50);
+            }, delay * 2);
+
+            setTimeout(() => {
+                // Nodes 4 and 5 boot & receive register lists
+                document.getElementById('node-bubble-4').classList.add('active');
+                document.getElementById('node-bubble-4').querySelector('.port').innerText = ':6000';
+                document.getElementById('line-1-4').classList.add('active');
+
+                document.getElementById('node-bubble-5').classList.add('active');
+                document.getElementById('node-bubble-5').querySelector('.port').innerText = ':6000';
+                document.getElementById('line-1-5').classList.add('active');
+            }, delay * 3);
+
+            setTimeout(() => {
+                // Connecting full mesh
+                document.getElementById('line-2-3').classList.add('active');
+                document.getElementById('line-2-4').classList.add('active');
+                document.getElementById('line-3-5').classList.add('active');
+                document.getElementById('line-4-5').classList.add('active');
+                
+                const ports = document.querySelectorAll('.node-bubble .port');
+                ports.forEach(p => {
+                    p.innerText = ':6000';
+                    p.style.color = 'var(--success-glow)';
+                });
+            }, delay * 4);
+        }
+
+        function animatePacket(x1, y1, x2, y2) {
+            const packet = document.getElementById('p2p-packet');
+            packet.style.display = 'block';
+            packet.setAttribute('cx', x1 + '%');
+            packet.setAttribute('cy', y1 + '%');
+            
+            setTimeout(() => {
+                packet.setAttribute('cx', x2 + '%');
+                packet.setAttribute('cy', y2 + '%');
+            }, 50);
+        }
+
+        // ------------------ Slide 4 Widget: Hashing ------------------
+        function calculateLiveHash() {
+            const recipient = document.getElementById('hash-recip').value;
+            const amount = parseFloat(document.getElementById('hash-amt').value) || 0;
+            const payload = `Alice_Wallet:${recipient}:${amount}:1717780000:{}`;
+            document.getElementById('hash-payload-display').innerText = `Payload: ${payload}`;
+            
+            // Simple fake hash function representing SHA-256 for demo
+            let hashVal = 0;
+            for (let i = 0; i < payload.length; i++) {
+                const char = payload.charCodeAt(i);
+                hashVal = ((hashVal << 5) - hashVal) + char;
+                hashVal = hashVal & hashVal;
+            }
+            
+            const rawHex = Math.abs(hashVal).toString(16).padStart(8, '0');
+            const hashedStr = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b' + rawHex;
+            document.getElementById('hash-result-display').innerText = hashedStr.slice(0, 64);
+        }
+
+        // ------------------ Slide 5 Widget: Contract VM ------------------
+        let vmContractType = 'counter';
+        let vmCounterVal = 0;
+        let vmBalances = { "Alice_Wallet": 500, "Bob_Wallet": 20 };
+        let vmLogs = ['[Block 0] Contract initialized.'];
+
+        function switchVMSim(type) {
+            vmContractType = type;
+            document.getElementById('tab-counter').classList.remove('active');
+            document.getElementById('tab-token').classList.remove('active');
+            
+            if (type === 'counter') {
+                document.getElementById('tab-counter').classList.add('active');
+            } else {
+                document.getElementById('tab-token').classList.add('active');
+            }
+            resetVMSim();
+        }
+
+        function resetVMSim() {
+            if (vmContractType === 'counter') {
+                vmCounterVal = 0;
+                vmLogs = ['[Block 0] Contract counter_v1 deployed. count=0'];
+            } else {
+                vmBalances = { "Alice_Wallet": 500, "Bob_Wallet": 20 };
+                vmLogs = ['[Block 0] Contract token_v1 deployed. Initial Supply = 520'];
+            }
+            updateVMDisplay();
+        }
+
+        function triggerVMAction() {
+            if (vmContractType === 'counter') {
+                vmCounterVal += 1;
+                vmLogs.push(`[Block ${vmLogs.length}] Transaction call: increment(). count is now ${vmCounterVal}`);
+            } else {
+                if (vmBalances["Alice_Wallet"] >= 50) {
+                    vmBalances["Alice_Wallet"] -= 50;
+                    vmBalances["Bob_Wallet"] += 50;
+                    vmLogs.push(`[Block ${vmLogs.length}] Transaction call: transfer(Bob_Wallet, 50). Success.`);
+                } else {
+                    vmLogs.push(`[Block ${vmLogs.length}] Transaction call: transfer(Bob_Wallet, 50). Failed: Insufficient balance.`);
+                }
+            }
+            updateVMDisplay();
+        }
+
+        function updateVMDisplay() {
+            const statePane = document.getElementById('vm-state-display');
+            if (vmContractType === 'counter') {
+                statePane.innerText = JSON.stringify({ "count": vmCounterVal }, null, 4);
+            } else {
+                statePane.innerText = JSON.stringify({ "balances": vmBalances }, null, 4);
+            }
+            
+            const logPane = document.getElementById('vm-logs-display');
+            logPane.innerHTML = vmLogs.map(l => `<div>${l}</div>`).join('');
+            logPane.scrollTop = logPane.scrollHeight;
+        }
+
+        // ------------------ Slide 6 Widget: Mining ------------------
+        let isMining = false;
+        let mineInterval;
+        function startInteractiveMining() {
+            if (isMining) return;
+            isMining = true;
+            document.getElementById('mine-btn-play').disabled = true;
+            document.getElementById('mine-btn-play').innerText = 'Mining...';
+            
+            let nonce = 0;
+            const logBox = document.getElementById('mine-log');
+            logBox.innerHTML = 'Mining loop started outside database lock...<br>';
+            
+            mineInterval = setInterval(() => {
+                nonce += Math.floor(Math.random() * 40) + 1;
+                document.getElementById('mine-nonce-display').innerText = `Nonce: ${nonce}`;
+                
+                // Demo SHA-256 calculation outputs
+                const tempHash = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+                logBox.innerHTML += `Nonce: ${nonce} | Try Hash: <span style="color: var(--text-muted);">${tempHash.slice(0, 16)}...</span> (invalid)<br>`;
+                logBox.scrollTop = logBox.scrollHeight;
+                
+                if (nonce > 300) {
+                    clearInterval(mineInterval);
+                    const solutionHash = "0000a4d1f2e3056b829accdbf" + Math.random().toString(36).substring(2, 10);
+                    logBox.innerHTML += `<br><span style="color: var(--success-glow); font-weight: bold;">[SOLUTION FOUND]</span><br>`;
+                    logBox.innerHTML += `Proof Nonce: <span style="color: var(--accent-glow);">${nonce}</span><br>`;
+                    logBox.innerHTML += `Validated Hash: <span style="color: var(--success-glow);">${solutionHash}</span><br>`;
+                    logBox.scrollTop = logBox.scrollHeight;
+                    
+                    isMining = false;
+                    document.getElementById('mine-btn-play').disabled = false;
+                    document.getElementById('mine-btn-play').innerText = 'Mined! Mine Again';
+                }
+            }, 150);
+        }
+
+        // ------------------ Slide 7 Widget: Chain Explorer ------------------
+        let simBlockHeight = 0;
+        function addSimulatedBlock() {
+            simBlockHeight += 1;
+            const timeline = document.getElementById('chain-explorer-view');
+            
+            // Add connection arrow first
+            const arrow = document.createElement('div');
+            arrow.className = 'chain-arrow';
+            arrow.innerText = '←';
+            timeline.appendChild(arrow);
+            
+            // Add block card
+            const prevHash = simBlockHeight === 1 ? '6b86b273' : Math.random().toString(16).substring(2, 10);
+            const thisHash = Math.random().toString(16).substring(2, 10) + Math.random().toString(16).substring(2, 10);
+            
+            const card = document.createElement('div');
+            card.className = 'chain-block-card newly-mined';
+            card.innerHTML = `
+                <h5>Block #${simBlockHeight}</h5>
+                <p>Prev: ${prevHash}</p>
+                <p>Hash: ${thisHash}...</p>
+            `;
+            timeline.appendChild(card);
+            
+            // Auto scroll container
+            timeline.scrollLeft = timeline.scrollWidth;
+        }
+
+        // Initialize presentation
+        goToSlide(1);
+    </script>
+</body>
+</html>
